@@ -83,7 +83,7 @@
     font-size: 20px;
     font-weight: 700;
     letter-spacing: 0.5px;
-    color: var(--text);
+    color: #ffffff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -91,7 +91,7 @@
   .header-tag {
     font-family: var(--mono);
     font-size: 9px;
-    color: var(--amber);
+    color: #aaaaaa;
     letter-spacing: 2px;
     text-transform: uppercase;
     margin-top: 1px;
@@ -699,6 +699,34 @@
   .parts-catalog-section::-webkit-scrollbar { width: 3px; }
   .parts-catalog-section::-webkit-scrollbar-thumb { background: var(--border2); }
 
+  /* ─── COLLAPSIBLE CATALOG ─────────────────── */
+  .catalog-toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    margin-bottom: 0;
+  }
+  .catalog-toggle .section-title { margin-bottom: 0; flex: 1; }
+  .catalog-toggle-arrow {
+    font-size: 11px;
+    color: var(--text3);
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+  .catalog-toggle-arrow.open { transform: rotate(180deg); }
+  .catalog-body {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s cubic-bezier(.4,0,.2,1), opacity 0.25s ease;
+    opacity: 0;
+  }
+  .catalog-body.open {
+    max-height: 600px;
+    opacity: 1;
+  }
+
   code {
     font-family: var(--mono);
     font-size: 12px;
@@ -775,14 +803,20 @@
 
       <!-- Parts Catalog -->
       <div class="section">
-        <div class="section-title">Parts Catalog</div>
-        <div class="search-wrap">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="est-search" placeholder="Search parts..." oninput="filterParts('est')">
+        <div class="catalog-toggle" onclick="toggleCatalog('est')">
+          <div class="section-title">Parts Catalog</div>
+          <span class="catalog-toggle-arrow" id="est-catalog-arrow">▼</span>
         </div>
-        <div class="chips-scroll" id="est-chips"></div>
-        <div class="parts-catalog-section parts-list" id="est-parts-list">
-          <div class="cart-empty">Loading parts catalog…</div>
+        <div class="catalog-body" id="est-catalog-body">
+          <div style="height:12px;"></div>
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="est-search" placeholder="Search parts..." oninput="filterParts('est')">
+          </div>
+          <div class="chips-scroll" id="est-chips"></div>
+          <div class="parts-catalog-section parts-list" id="est-parts-list">
+            <div class="cart-empty">Loading parts catalog…</div>
+          </div>
         </div>
       </div>
 
@@ -859,14 +893,20 @@
 
       <!-- Parts Catalog -->
       <div class="section">
-        <div class="section-title">Parts Catalog</div>
-        <div class="search-wrap">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="inv-search" placeholder="Search parts..." oninput="filterParts('inv')">
+        <div class="catalog-toggle" onclick="toggleCatalog('inv')">
+          <div class="section-title">Parts Catalog</div>
+          <span class="catalog-toggle-arrow" id="inv-catalog-arrow">▼</span>
         </div>
-        <div class="chips-scroll" id="inv-chips"></div>
-        <div class="parts-catalog-section parts-list" id="inv-parts-list">
-          <div class="cart-empty">Loading parts catalog…</div>
+        <div class="catalog-body" id="inv-catalog-body">
+          <div style="height:12px;"></div>
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="inv-search" placeholder="Search parts..." oninput="filterParts('inv')">
+          </div>
+          <div class="chips-scroll" id="inv-chips"></div>
+          <div class="parts-catalog-section parts-list" id="inv-parts-list">
+            <div class="cart-empty">Loading parts catalog…</div>
+          </div>
         </div>
       </div>
 
@@ -1038,6 +1078,14 @@ function switchTab(tab) {
   document.getElementById('tab-' + tab).classList.add('active');
   document.querySelectorAll('.tab-btn')[tab === 'estimate' ? 0 : 1].classList.add('active');
   document.getElementById('content').scrollTop = 0;
+}
+
+function toggleCatalog(prefix) {
+  const body = document.getElementById(prefix + '-catalog-body');
+  const arrow = document.getElementById(prefix + '-catalog-arrow');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  arrow.classList.toggle('open', !isOpen);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1331,20 +1379,22 @@ function buildPDF(type, docNum) {
 
   // Colors
   const C_DARK = [20, 20, 20];
-  const C_MID = [60, 60, 60];
+  const C_MID = [80, 80, 80];
   const C_LIGHT = [140, 140, 140];
-  const C_AMBER = [200, 130, 20];
   const C_WHITE = [255, 255, 255];
-  const C_BG = [248, 248, 246];
-  const C_HEADBG = [30, 30, 30];
+  const C_BG = [248, 248, 248];
+  const C_HEADBG = [28, 28, 28];
+  const C_ACCENT = [28, 28, 28];      // replaces amber — dark for borders/totals
+  const C_TOTAL_BG = [40, 40, 40];   // dark bg for grand total row
+  const C_ROW_ALT = [250, 250, 250]; // subtle alt row
 
   let y = 0;
 
   // ── HEADER BAND ──────────────────────────
   doc.setFillColor(...C_HEADBG);
   doc.rect(0, 0, W, 42, 'F');
-  doc.setFillColor(...C_AMBER);
-  doc.rect(0, 42, W, 2, 'F');
+  doc.setFillColor(200, 200, 200);
+  doc.rect(0, 42, W, 0.5, 'F');
 
   // Logo
   let logoX = MARGIN;
@@ -1378,7 +1428,7 @@ function buildPDF(type, docNum) {
   doc.setFillColor(...C_BG);
   doc.rect(0, y, W, 22, 'F');
 
-  doc.setTextColor(...C_AMBER);
+  doc.setTextColor(...C_DARK);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
   doc.text(type === 'estimate' ? 'ESTIMATE' : 'INVOICE', MARGIN, y + 14);
@@ -1442,9 +1492,8 @@ function buildPDF(type, docNum) {
   doc.setFontSize(8);
   const tCols = [
     { label: '#', x: MARGIN + 2, w: 8 },
-    { label: 'PART / DESCRIPTION', x: MARGIN + 10, w: 90 },
-    { label: 'QTY', x: MARGIN + 105, w: 20, right: true },
-    { label: 'UNIT', x: MARGIN + 128, w: 26, right: true },
+    { label: 'PART / DESCRIPTION', x: MARGIN + 10, w: 110 },
+    { label: 'QTY', x: MARGIN + 130, w: 20, right: true },
     { label: 'TOTAL', x: MARGIN + 155, w: 27, right: true }
   ];
   tCols.forEach(col => {
@@ -1455,7 +1504,7 @@ function buildPDF(type, docNum) {
 
   carts[prefix].forEach((item, idx) => {
     const line = item.price * item.qty;
-    const rowBg = idx % 2 === 0 ? [255, 255, 255] : [250, 249, 247];
+    const rowBg = idx % 2 === 0 ? [255, 255, 255] : [250, 250, 250];
     doc.setFillColor(...rowBg);
     doc.rect(MARGIN, y, COL_W, 7.5, 'F');
 
@@ -1464,10 +1513,9 @@ function buildPDF(type, docNum) {
     doc.setFontSize(8.5);
 
     doc.text(String(idx + 1), MARGIN + 2, y + 5);
-    const nameStr = item.name.length > 45 ? item.name.substring(0, 42) + '...' : item.name;
+    const nameStr = item.name.length > 52 ? item.name.substring(0, 49) + '...' : item.name;
     doc.text(nameStr, MARGIN + 10, y + 5);
-    doc.text(String(item.qty), MARGIN + 115, y + 5, { align: 'right' });
-    doc.text(sym + item.price.toLocaleString('en-IN'), MARGIN + 154, y + 5, { align: 'right' });
+    doc.text(String(item.qty), MARGIN + 150, y + 5, { align: 'right' });
     doc.setFont('helvetica', 'bold');
     doc.text(sym + line.toLocaleString('en-IN'), MARGIN + 182, y + 5, { align: 'right' });
     y += 7.5;
@@ -1480,8 +1528,8 @@ function buildPDF(type, docNum) {
   });
 
   // Table border
-  doc.setDrawColor(...C_AMBER);
-  doc.setLineWidth(0.5);
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.4);
   doc.line(MARGIN, y, W - MARGIN, y);
   y += 6;
 
@@ -1520,7 +1568,8 @@ function buildPDF(type, docNum) {
         if (y > 255) { doc.addPage(); y = 20; }
       });
 
-      doc.setDrawColor(...C_AMBER);
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.4);
       doc.line(MARGIN, y, W - MARGIN, y);
       y += 6;
     }
@@ -1543,9 +1592,9 @@ function buildPDF(type, docNum) {
     });
 
     y += 2;
-    doc.setFillColor(...C_HEADBG);
+    doc.setFillColor(...C_TOTAL_BG);
     doc.rect(W - MARGIN - 68, y - 3, 68, 10, 'F');
-    doc.setTextColor(...C_AMBER);
+    doc.setTextColor(...C_WHITE);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.text('GRAND TOTAL', W - MARGIN - 62, y + 4);
@@ -1553,9 +1602,9 @@ function buildPDF(type, docNum) {
     y += 14;
   } else {
     // Estimate total
-    doc.setFillColor(...C_HEADBG);
+    doc.setFillColor(...C_TOTAL_BG);
     doc.rect(W - MARGIN - 68, y - 2, 68, 10, 'F');
-    doc.setTextColor(...C_AMBER);
+    doc.setTextColor(...C_WHITE);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.text('TOTAL', W - MARGIN - 62, y + 5);
@@ -1585,13 +1634,13 @@ function buildPDF(type, docNum) {
 
   // Footer
   const footerY = 290;
-  doc.setFillColor(...C_HEADBG);
+  doc.setFillColor(245, 245, 245);
   doc.rect(0, footerY - 2, W, 12, 'F');
-  doc.setFillColor(...C_AMBER);
-  doc.rect(0, footerY - 2, W, 1, 'F');
+  doc.setFillColor(200, 200, 200);
+  doc.rect(0, footerY - 2, W, 0.5, 'F');
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(180, 180, 180);
+  doc.setTextColor(120, 120, 120);
   const footerLeft = config.workshop_name + (config.phone ? '  |  ' + config.phone : '');
   const footerRight = type === 'estimate' ? 'This is an estimate — prices may vary.' : 'Tax Invoice';
   doc.text(footerLeft, MARGIN, footerY + 4);
