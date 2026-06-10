@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice</title>
+<style>
+  /*
+  ================================================================
+  INVOICE TEMPLATE
+  ================================================================
+  This file controls 100% of what your Invoice PDF looks like.
+  Edit freely — index.html passes data in, this file renders it.
+
+  DATA AVAILABLE (via window.PDF_DATA):
+    .config         → workshop_name, address, phone, email, whatsapp, currency_symbol
+    .logoDataUrl    → base64 logo image string (or null)
+    .docNum         → e.g. "INV-001"
+    .customer       → customer name
+    .vehicle        → vehicle name
+    .plate          → registration number
+    .date           → ISO date string e.g. "2024-06-10"
+    .cart           → array of { name, price, qty }
+    .labourRows     → array of { description, amount }
+    .remarks        → notes string
+  ================================================================
+  */
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    color: #1a1a1a;
+    background: #fff;
+  }
+
+  /* ── PRINT CONTROLS (hidden in PDF) ── */
+  .print-controls {
+    background: #111;
+    color: #fff;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .print-controls span { font-size: 13px; opacity: 0.8; }
+  .btn-print {
+    background: #fff;
+    color: #111;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+  }
+  .btn-print:hover { background: #e0e0e0; }
+
+  @media print {
+    .print-controls { display: none !important; }
+    body { padding: 0; }
+    .page { box-shadow: none !important; margin: 0 !important; border: none !important; }
+    .avoid-break { page-break-inside: avoid; }
+  }
+
+  /* ── PAGE ── */
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 20px auto;
+    background: #fff;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  .doc-header {
+    background: #1c1c1c;
+    padding: 20px 24px 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .doc-header-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    border-radius: 6px;
+    background: #333;
+    flex-shrink: 0;
+  }
+  .doc-workshop-name { font-size: 20px; font-weight: 700; color: #fff; letter-spacing: 0.3px; }
+  .doc-workshop-meta { font-size: 11px; color: #aaa; margin-top: 3px; line-height: 1.5; }
+
+  /* ── DOC TYPE BAND ── */
+  .doc-type-band {
+    background: #f5f5f5;
+    border-bottom: 2px solid #1c1c1c;
+    padding: 12px 24px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .doc-type-label { font-size: 26px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+
+  /* ── TAX INVOICE BADGE ── */
+  .tax-badge {
+    background: #1c1c1c;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+
+  .doc-meta-right { text-align: right; }
+  .doc-number { font-size: 13px; font-weight: 700; color: #333; font-family: 'Courier New', monospace; }
+  .doc-date { font-size: 11px; color: #777; margin-top: 2px; }
+
+  /* ── CUSTOMER ROW ── */
+  .customer-row {
+    padding: 14px 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .cfield-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #999; margin-bottom: 3px; }
+  .cfield-value { font-size: 13px; color: #1a1a1a; font-weight: 500; }
+
+  /* ── TABLE ── */
+  .table-section { padding: 0 24px; margin-top: 16px; }
+  .table-heading { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #888; margin-bottom: 6px; }
+  .doc-table { width: 100%; border-collapse: collapse; }
+  .doc-table thead tr { background: #1c1c1c; color: #fff; }
+  .doc-table thead th { padding: 7px 10px; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; text-align: left; }
+  .doc-table thead th.right { text-align: right; }
+  .doc-table tbody tr:nth-child(even) { background: #fafafa; }
+  .doc-table tbody td { padding: 8px 10px; font-size: 12px; color: #222; border-bottom: 1px solid #f0f0f0; }
+  .doc-table tbody td.right { text-align: right; font-family: 'Courier New', monospace; }
+  .doc-table tbody td.num { color: #999; font-size: 11px; }
+  .doc-table tbody td.bold { font-weight: 600; }
+
+  /* ── TOTALS BREAKDOWN ── */
+  .totals-section {
+    margin: 16px 24px 0;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .totals-table { min-width: 260px; border: 1px solid #e8e8e8; border-radius: 6px; overflow: hidden; }
+  .totals-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-bottom: 1px solid #f0f0f0; }
+  .totals-row:last-child { border-bottom: none; }
+  .totals-row.grand { background: #1c1c1c; color: #fff; }
+  .totals-label { font-size: 12px; color: #555; }
+  .totals-row.grand .totals-label { color: #ccc; font-weight: 600; letter-spacing: 0.5px; }
+  .totals-value { font-size: 12px; font-family: 'Courier New', monospace; color: #222; }
+  .totals-row.grand .totals-value { font-size: 17px; color: #fff; font-weight: 700; }
+
+  /* ── REMARKS ── */
+  .remarks-section { margin: 16px 24px 0; border: 1px solid #e8e8e8; border-radius: 6px; padding: 12px 14px; }
+  .remarks-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #888; margin-bottom: 6px; }
+  .remarks-text { font-size: 12px; color: #444; line-height: 1.6; }
+
+  /* ── FOOTER ── */
+  .doc-footer {
+    margin-top: auto;
+    background: #f5f5f5;
+    border-top: 1px solid #e0e0e0;
+    padding: 10px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+  }
+  .footer-left { font-size: 10px; color: #888; }
+  .footer-right { font-size: 10px; color: #aaa; font-style: italic; }
+
+  .loading { padding: 40px; text-align: center; color: #888; }
+
+  /* ── LABOUR SECTION SPACING ── */
+  .section-gap { margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<div class="print-controls">
+  <span id="print-label">Preparing invoice…</span>
+  <button class="btn-print" onclick="window.print()">🖨 Print / Save as PDF</button>
+</div>
+
+<div class="page" id="page">
+  <div class="loading">Loading invoice data…</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// INVOICE TEMPLATE RENDERER
+//
+// To redesign: only edit the HTML/CSS above this script.
+// This script pulls data from sessionStorage and fills in
+// the template. You don't need to touch index.html at all.
+// ════════════════════════════════════════════════════════
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch(e) { return dateStr; }
+}
+
+function escHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function render(data) {
+  const { config, logoDataUrl, docNum, customer, vehicle, plate, date, cart, labourRows, remarks } = data;
+  const sym = config.currency_symbol || '₹';
+
+  document.title = docNum + ' – Invoice – ' + config.workshop_name;
+  document.getElementById('print-label').textContent = docNum + ' — ' + config.workshop_name;
+
+  // Parts table rows
+  let partsTotal = 0;
+  const partRows = cart.map((item, i) => {
+    const line = item.price * item.qty;
+    partsTotal += line;
+    return `<tr>
+      <td class="num">${i + 1}</td>
+      <td>${escHtml(item.name)}</td>
+      <td class="right">${item.qty}</td>
+      <td class="right">${sym}${item.price.toLocaleString('en-IN')}</td>
+      <td class="right bold">${sym}${line.toLocaleString('en-IN')}</td>
+    </tr>`;
+  }).join('');
+
+  // Labour table rows
+  const labourItems = (labourRows || []).filter(r => r.description || r.amount);
+  let labourTotal = 0;
+  const labourRowsHtml = labourItems.map((row, i) => {
+    labourTotal += row.amount || 0;
+    return `<tr>
+      <td class="num">${i + 1}</td>
+      <td colspan="3">${escHtml(row.description || '(Labour)')}</td>
+      <td class="right bold">${sym}${(row.amount || 0).toLocaleString('en-IN')}</td>
+    </tr>`;
+  }).join('');
+
+  const grand = partsTotal + labourTotal;
+
+  // Labour section (only if there are labour items)
+  const labourSection = labourItems.length ? `
+    <div class="table-section section-gap avoid-break">
+      <div class="table-heading">Labour Charges</div>
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th style="width:28px">#</th>
+            <th colspan="3">Description</th>
+            <th class="right" style="width:100px">Amount</th>
+          </tr>
+        </thead>
+        <tbody>${labourRowsHtml}</tbody>
+      </table>
+    </div>` : '';
+
+  // Totals section
+  const totalsHtml = `
+    <div class="totals-section avoid-break">
+      <div class="totals-table">
+        <div class="totals-row">
+          <span class="totals-label">Parts Subtotal</span>
+          <span class="totals-value">${sym}${partsTotal.toLocaleString('en-IN')}</span>
+        </div>
+        <div class="totals-row">
+          <span class="totals-label">Labour Subtotal</span>
+          <span class="totals-value">${sym}${labourTotal.toLocaleString('en-IN')}</span>
+        </div>
+        <div class="totals-row grand">
+          <span class="totals-label">Grand Total</span>
+          <span class="totals-value">${sym}${grand.toLocaleString('en-IN')}</span>
+        </div>
+      </div>
+    </div>`;
+
+  // Remarks
+  const remarksHtml = remarks ? `
+    <div class="remarks-section avoid-break">
+      <div class="remarks-label">Remarks</div>
+      <div class="remarks-text">${escHtml(remarks)}</div>
+    </div>` : '';
+
+  // Meta info
+  let metaParts = [];
+  if (config.address) metaParts.push(config.address);
+  const contacts = [];
+  if (config.phone) contacts.push('📞 ' + config.phone);
+  if (config.email) contacts.push(config.email);
+  if (contacts.length) metaParts.push(contacts.join('  ·  '));
+  const metaHtml = metaParts.map(l => escHtml(l)).join('<br>');
+
+  const logoHtml = logoDataUrl
+    ? `<img class="doc-header-logo" src="${logoDataUrl}" alt="Logo">`
+    : '';
+
+  document.getElementById('page').innerHTML = `
+    <!-- HEADER -->
+    <div class="doc-header">
+      ${logoHtml}
+      <div>
+        <div class="doc-workshop-name">${escHtml(config.workshop_name)}</div>
+        ${metaHtml ? `<div class="doc-workshop-meta">${metaHtml}</div>` : ''}
+      </div>
+    </div>
+
+    <!-- DOC TYPE -->
+    <div class="doc-type-band">
+      <div>
+        <span class="doc-type-label">Invoice</span>
+        <span class="tax-badge">Tax Invoice</span>
+      </div>
+      <div class="doc-meta-right">
+        <div class="doc-number">${escHtml(docNum)}</div>
+        <div class="doc-date">${formatDate(date)}</div>
+      </div>
+    </div>
+
+    <!-- CUSTOMER -->
+    <div class="customer-row">
+      <div>
+        <div class="cfield-label">Customer</div>
+        <div class="cfield-value">${escHtml(customer || '—')}</div>
+      </div>
+      <div>
+        <div class="cfield-label">Vehicle</div>
+        <div class="cfield-value">${escHtml(vehicle || '—')}</div>
+      </div>
+      <div>
+        <div class="cfield-label">Reg. No.</div>
+        <div class="cfield-value">${escHtml(plate || '—')}</div>
+      </div>
+    </div>
+
+    <!-- PARTS TABLE -->
+    <div class="table-section">
+      <div class="table-heading">Parts &amp; Items</div>
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th style="width:28px">#</th>
+            <th>Description</th>
+            <th class="right" style="width:40px">Qty</th>
+            <th class="right" style="width:80px">Unit Price</th>
+            <th class="right" style="width:80px">Total</th>
+          </tr>
+        </thead>
+        <tbody>${partRows}</tbody>
+      </table>
+    </div>
+
+    <!-- LABOUR TABLE -->
+    ${labourSection}
+
+    <!-- TOTALS -->
+    ${totalsHtml}
+
+    <!-- REMARKS -->
+    ${remarksHtml}
+
+    <!-- FOOTER -->
+    <div class="doc-footer">
+      <div class="footer-left">${escHtml(config.workshop_name)}${config.phone ? '  ·  ' + escHtml(config.phone) : ''}</div>
+      <div class="footer-right">Thank you for your business.</div>
+    </div>
+  `;
+}
+
+// ── Load data from sessionStorage ──
+(function init() {
+  const params = new URLSearchParams(window.location.search);
+  const key = params.get('key');
+  if (!key) {
+    document.getElementById('page').innerHTML = '<div class="loading">No data found. Please generate from the Workshop App.</div>';
+    return;
+  }
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) throw new Error('Session expired');
+    const data = JSON.parse(raw);
+    sessionStorage.removeItem(key); // clean up
+    window.PDF_DATA = data;         // expose for debugging
+    render(data);
+  } catch(e) {
+    document.getElementById('page').innerHTML = `<div class="loading">Could not load invoice data: ${e.message}</div>`;
+  }
+})();
+</script>
+</body>
+</html>
