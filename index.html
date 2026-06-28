@@ -198,7 +198,9 @@
           </div>
           <div class="input-group">
             <label class="input-label">Reg. Number</label>
-            <input type="text" id="est-plate" placeholder="e.g. KL-01-AB-1234">
+            <input type="text" id="est-plate" placeholder="e.g. KL-01-AB-1234" maxlength="13"
+              oninput="formatRegNo(this)" onblur="validateRegNo(this, 'est-plate-error')">
+            <div class="error-msg" id="est-plate-error"></div>
           </div>
         </div>
       </div>
@@ -277,7 +279,9 @@
           </div>
           <div class="input-group">
             <label class="input-label">Reg. Number</label>
-            <input type="text" id="inv-plate" placeholder="e.g. KL-01-AB-1234">
+            <input type="text" id="inv-plate" placeholder="e.g. KL-01-AB-1234" maxlength="13"
+              oninput="formatRegNo(this)" onblur="validateRegNo(this, 'inv-plate-error')">
+            <div class="error-msg" id="inv-plate-error"></div>
           </div>
         </div>
       </div>
@@ -397,8 +401,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function setTodayDate(id) {
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById(id).value = today;
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  document.getElementById(id).value = `${y}-${m}-${d}`;
 }
 
 async function loadConfig() {
@@ -468,7 +475,7 @@ function toggleCatalog(prefix) {
 // ═══════════════════════════════════════════════════════
 // CATALOG
 // ═══════════════════════════════════════════════════════
-function renderCatalog(prefix) { renderChips(prefix); renderPartsList(prefix, ''); }
+function renderCatalog(prefix) { renderChips(prefix); filterParts(prefix); }
 
 function renderChips(prefix) {
   const container = document.getElementById(prefix + '-chips');
@@ -711,6 +718,13 @@ function generatePDF(type) {
     return;
   }
 
+  // Validate reg number if filled
+  const plateEl = document.getElementById(prefix + '-plate');
+  if (plateEl.value.trim() && !validateRegNo(plateEl, prefix + '-plate-error')) {
+    plateEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
   const docNum = getNextNumber(type);
 
   // Build the payload — everything the template needs
@@ -728,20 +742,24 @@ function generatePDF(type) {
     remarks:  document.getElementById(prefix + '-remarks').value,
   };
 
-  // Store in sessionStorage under a unique key
+  // Store in localStorage (persists across tabs, unlike sessionStorage)
   const storageKey = 'ws_pdf_' + Date.now();
-  sessionStorage.setItem(storageKey, JSON.stringify(payload));
+  localStorage.setItem(storageKey, JSON.stringify(payload));
 
   // Open the correct template file
   const templateFile = type === 'estimate' ? 'estimate-template.html' : 'invoice-template.html';
   const win = window.open(`${templateFile}?key=${storageKey}`, '_blank');
 
   if (!win) {
-    errEl.textContent = 'Popup was blocked. Please allow popups for this site.';
+    // Popup blocked — show error and clean up stored data
+    localStorage.removeItem(storageKey);
+    errEl.innerHTML = 'Popup was blocked. <strong>Allow popups</strong> for this site, then try again.';
     errEl.classList.add('show');
+    errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
   }
 
-  // Show the share modal — the template window handles actual PDF generation
+  // Popup opened successfully — show the share modal
   showShareModal(type, docNum);
 }
 
@@ -831,6 +849,66 @@ function escHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ═══════════════════════════════════════════════════════
+// REG NUMBER VALIDATION
+// Format: XX-YY-AA-NUMBER
+//   XX    = 2 letters (state code, e.g. KL, KA, TN)
+//   YY    = 2 digits (01-99, padded with leading zero)
+//   AA    = 1 or 2 letters (series)
+//   NUMBER = 1 to 4 digits
+// ═══════════════════════════════════════════════════════
+function formatRegNo(input) {
+  let val = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+  let state = val.substring(0, 2);
+  let district = val.substring(2, 4);
+
+  // Series: 1-2 letters starting at position 4
+  let seriesEnd = 4;
+  while (seriesEnd < val.length && seriesEnd < 6 && /[A-Z]/.test(val[seriesEnd])) {
+    seriesEnd++;
+  }
+  let series = val.substring(4, seriesEnd);
+
+  // Number: digits after series
+  let number = val.substring(seriesEnd).replace(/[^0-9]/g, '');
+
+  let formatted = state;
+  if (district) formatted += '-' + district;
+  if (series) formatted += '-' + series;
+  if (number) formatted += '-' + number;
+  input.value = formatted;
+}
+
+function validateRegNo(input, errorId) {
+  const errEl = document.getElementById(errorId);
+  const val = input.value.trim();
+  errEl.classList.remove('show');
+
+  if (!val) return true; // empty is OK (not required)
+
+  // Pattern: XX-YY-AA-N where XX=2 letters, YY=2 digits, AA=1-2 letters, N=1-4 digits
+  const pattern = /^[A-Z]{2}-\d{2}-[A-Z]{1,2}-\d{1,4}$/;
+  if (!pattern.test(val)) {
+    errEl.textContent = 'Invalid format. Expected: State-District-Series-Number (e.g. KL-01-AB-1234).';
+    errEl.classList.add('show');
+    input.style.borderColor = 'var(--red)';
+    return false;
+  }
+
+  // Validate district code (01-99)
+  const district = parseInt(val.split('-')[1], 10);
+  if (district < 1 || district > 99) {
+    errEl.textContent = 'District code must be between 01 and 99.';
+    errEl.classList.add('show');
+    input.style.borderColor = 'var(--red)';
+    return false;
+  }
+
+  input.style.borderColor = '';
+  return true;
 }
 </script>
 </body>
