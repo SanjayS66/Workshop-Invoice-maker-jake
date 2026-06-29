@@ -28,7 +28,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: 'Segoe UI', Arial, sans-serif;
+    font-family: 'Helvetica Neue', 'Arial', sans-serif;
     font-size: 13px;
     color: #1a1a1a;
     background: #fff;
@@ -80,25 +80,27 @@
 
   /* ── HEADER ── */
   .doc-header {
-    background: #1c1c1c;
-    padding: 20px 24px 18px;
+    background: #fff;
+    padding: 24px 24px 20px;
     display: flex;
     align-items: center;
     gap: 16px;
+    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 28px;
   }
   .doc-header-logo {
     width: 48px;
     height: 48px;
     object-fit: contain;
     border-radius: 6px;
-    background: #333;
+    background: #f0f0f0;
     flex-shrink: 0;
   }
   .doc-header-text { flex: 1; min-width: 0; }
   .doc-workshop-name {
-    font-size: 20px;
+    font-size: 26px;
     font-weight: 700;
-    color: #fff;
+    color: #000;
     letter-spacing: 0.3px;
     white-space: nowrap;
     overflow: hidden;
@@ -106,30 +108,29 @@
   }
   .doc-workshop-meta {
     font-size: 11px;
-    color: #aaa;
+    color: #666;
     margin-top: 3px;
     line-height: 1.5;
   }
 
   /* ── DOC TYPE BAND ── */
   .doc-type-band {
-    background: #f5f5f5;
-    border-bottom: 2px solid #1c1c1c;
-    padding: 12px 24px;
+    padding: 0 24px 14px;
     display: flex;
     align-items: baseline;
     justify-content: space-between;
+    margin-bottom: 10px;
   }
   .doc-type-label {
-    font-size: 26px;
-    font-weight: 800;
-    letter-spacing: 2px;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 1px;
     text-transform: uppercase;
-    color: #1c1c1c;
+    color: #000;
   }
   .doc-meta-right { text-align: right; }
   .doc-number { font-size: 13px; font-weight: 700; color: #333; font-family: 'Courier New', monospace; }
-  .doc-date { font-size: 11px; color: #777; margin-top: 2px; }
+  .doc-date { font-size: 14px; font-weight: 600; color: #333; margin-top: 2px; }
 
   /* ── CUSTOMER ROW ── */
   .customer-row {
@@ -150,7 +151,7 @@
   .cfield-value { font-size: 13px; color: #1a1a1a; font-weight: 500; }
 
   /* ── PARTS TABLE ── */
-  .table-section { padding: 0 24px; margin-top: 16px; }
+  .table-section { padding: 0 24px; margin-top: 30px; }
   .table-heading {
     font-size: 9px;
     font-weight: 700;
@@ -161,14 +162,14 @@
   }
   .parts-table { width: 100%; border-collapse: collapse; }
   .parts-table thead tr {
-    background: #1c1c1c;
-    color: #fff;
+    background: #d9d9d9;
+    color: #000;
   }
   .parts-table thead th {
-    padding: 7px 10px;
-    font-size: 9px;
+    padding: 8px 10px;
+    font-size: 10px;
     font-weight: 700;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     text-align: left;
   }
@@ -191,18 +192,17 @@
     justify-content: flex-end;
   }
   .total-inner {
-    background: #1c1c1c;
-    color: #fff;
-    padding: 10px 18px;
-    border-radius: 6px;
+    background: #fff;
+    color: #000;
+    padding: 12px 20px;
     display: flex;
     align-items: center;
-    gap: 20px;
-    min-width: 200px;
+    gap: 24px;
+    min-width: 220px;
     justify-content: space-between;
   }
-  .total-inner-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
-  .total-inner-value { font-size: 18px; font-weight: 700; font-family: 'Courier New', monospace; }
+  .total-inner-label { font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; }
+  .total-inner-value { font-size: 26px; font-weight: 700; font-family: 'Courier New', monospace; color: #000; }
 
   /* ── REMARKS ── */
   .remarks-section {
@@ -226,11 +226,10 @@
     margin-top: auto;
     background: #f5f5f5;
     border-top: 1px solid #e0e0e0;
-    padding: 10px 24px;
+    padding: 12px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 24px;
   }
   .footer-left { font-size: 10px; color: #888; }
   .footer-right { font-size: 10px; color: #aaa; font-style: italic; }
