@@ -748,7 +748,7 @@ function generatePDF(type) {
 
   // Open the correct template file
   const templateFile = type === 'estimate' ? 'estimate-template.html' : 'invoice-template.html';
-  const win = window.open(`${templateFile}?key=${storageKey}`, '_blank');
+  const win = window.open(`${templateFile}?key=${storageKey}&_t=${Date.now()}`, '_blank');
 
   if (!win) {
     // Popup blocked — show error and clean up stored data
