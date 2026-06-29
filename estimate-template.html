@@ -364,7 +364,7 @@ function render(data) {
       ${logoHtml}
       <div class="doc-company-block">
         <div class="doc-workshop-name">${escHtml(config.workshop_name)}</div>
-        ${config.address ? `<div class="doc-workshop-address">${escHtml(config.address)}</div>` : ''}
+        ${config.address ? `<div class="doc-workshop-address">${escHtml(config.address).replace(/(PO),\s*/i, '$1,<br>')}</div>` : ''}
         ${govtHtml ? `<div class="doc-workshop-govt">${govtHtml}</div>` : ''}
       </div>
       ${ssiHtml}
